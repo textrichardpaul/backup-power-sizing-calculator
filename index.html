@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Backup Power Sizing Calculator: What Size Power Station Do You Need?</title>
+    <meta name="description" content="Work out what size portable power station your home needs. Pick a situation or a room, adjust the devices, and see the watt-hours, peak power and station size in plain language." />
+    <style>
+      :root {
+        --paper: #faf7f1;
+        --surface: #ffffff;
+        --surface-2: #f3eee4;
+        --ink: #23211d;
+        --ink-soft: #55504a;
+        --ink-faint: #7d766c;
+        --line: #e3dccd;
+        --gold: #b98c2e;
+        --gold-deep: #9a741f;
+        --gold-tint: #f6ecd4;
+        --charcoal: #1c1b18;
+        --radius: 14px;
+        --shadow: 0 1px 2px rgba(35, 33, 29, 0.06), 0 8px 24px rgba(35, 33, 29, 0.06);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #171613;
+          --surface: #201f1c;
+          --surface-2: #26241f;
+          --ink: #f2ede2;
+          --ink-soft: #c9c2b4;
+          --ink-faint: #9a927f;
+          --line: #3a372f;
+          --gold: #d2a24c;
+          --gold-deep: #d2a24c;
+          --gold-tint: #2e2a1e;
+          --charcoal: #100f0d;
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+        }
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+        font-size: 16px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px 96px; }
+
+      /* Header */
+      header.site { padding: 34px 0 8px; }
+      .wordmark {
+        font-size: clamp(30px, 6vw, 40px);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        margin: 0;
+      }
+      .wordmark .flux { color: var(--gold-deep); }
+      .brandline { margin: 10px 0 0; font-size: clamp(16px, 2.6vw, 19px); color: var(--ink); font-weight: 600; }
+      .tagline { margin: 2px 0 0; color: var(--ink-soft); font-size: 15px; }
+      .rule { height: 3px; width: 64px; background: var(--gold); border-radius: 2px; margin: 20px 0 0; }
+
+      h1.page {
+        font-size: clamp(26px, 4.6vw, 36px);
+        line-height: 1.15;
+        letter-spacing: -0.015em;
+        margin: 28px 0 8px;
+        font-weight: 800;
+      }
+      .lede { color: var(--ink-soft); max-width: 62ch; margin: 0; }
+
+      h2.section {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin: 34px 0 4px;
+      }
+      .section-note { color: var(--ink-soft); margin: 0 0 12px; font-size: 15px; }
+
+      /* Chips */
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .chip {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        font: inherit;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 10px 16px;
+        min-height: 44px;
+        border-radius: 999px;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+      }
+      .chip:hover { border-color: var(--gold); }
+      .chip:active { background: var(--gold-tint); }
+      .chip:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+        outline: 3px solid var(--gold);
+        outline-offset: 2px;
+      }
+
+      /* Layout */
+      .layout { display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 8px; }
+      @media (min-width: 920px) {
+        .layout { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
+        .results-col { position: sticky; top: 20px; }
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 18px;
+      }
+
+      /* Duration control */
+      .duration-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+      .duration-row label { font-weight: 700; font-size: 15px; }
+      .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+      .seg button {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--ink);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 8px 12px;
+        min-height: 40px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .seg button[aria-pressed="true"] {
+        background: var(--charcoal);
+        color: #f6efdd;
+        border-color: var(--charcoal);
+      }
+      @media (prefers-color-scheme: dark) {
+        .seg button[aria-pressed="true"] { background: var(--gold); color: #171613; border-color: var(--gold); }
+      }
+      .duration-custom { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-soft); }
+      .duration-custom input { width: 76px; }
+
+      input[type="number"], select {
+        font: inherit;
+        font-size: 16px;
+        color: var(--ink);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 8px 10px;
+        min-height: 42px;
+      }
+      input[type="number"]:focus, select:focus { border-color: var(--gold); }
+
+      /* Device rows */
+      .device-list { display: grid; gap: 12px; margin-top: 14px; }
+      .device {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 10px 14px;
+      }
+      .device.open { padding-bottom: 14px; }
+      .device-head { display: flex; align-items: center; gap: 8px; }
+      .device-name { font-weight: 700; font-size: 16px; margin: 0; flex: 1; }
+      .device-qty { color: var(--ink-faint); font-weight: 600; font-size: 14px; }
+      .device-wh { font-size: 13px; color: var(--ink-faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .device-toggle {
+        appearance: none; border: none; background: none; cursor: pointer;
+        color: var(--gold-deep); font: inherit; font-size: 13.5px; font-weight: 700;
+        padding: 6px 2px; min-height: 32px; display: inline-flex; align-items: center; gap: 4px; flex: none;
+      }
+      .device-toggle svg { width: 14px; height: 14px; flex: none; transition: transform 0.15s ease; }
+      .device.open .device-toggle svg { transform: rotate(180deg); }
+      .device-detail[hidden] { display: none; }
+      .remove-btn {
+        appearance: none; border: none; background: none; cursor: pointer;
+        color: var(--ink-faint); font: inherit; font-size: 13px; font-weight: 600;
+        padding: 6px 4px; min-height: 32px;
+      }
+      .remove-btn:hover { color: #b3402a; }
+      .device-fields {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+      @media (min-width: 560px) {
+        .device-fields { grid-template-columns: repeat(5, 1fr); }
+      }
+      .field label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: var(--ink-soft);
+        margin-bottom: 4px;
+      }
+      .field input { width: 100%; }
+      .device-note { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
+
+      .empty-state {
+        border: 1px dashed var(--line);
+        border-radius: var(--radius);
+        padding: 22px 16px;
+        text-align: center;
+        color: var(--ink-soft);
+        margin-top: 14px;
+        font-size: 15px;
+      }
+
+      /* Add device */
+      .add-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+      .add-row select { flex: 1 1 240px; }
+      .btn {
+        appearance: none;
+        border: 1px solid var(--charcoal);
+        background: var(--charcoal);
+        color: #f6efdd;
+        font: inherit;
+        font-weight: 700;
+        font-size: 15px;
+        padding: 10px 18px;
+        min-height: 46px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      .btn:hover { opacity: 0.9; }
+      @media (prefers-color-scheme: dark) {
+        .btn { background: var(--gold); border-color: var(--gold); color: #171613; }
+      }
+      .btn-ghost {
+        background: none; border: 1px solid var(--line); color: var(--ink-soft);
+        font-size: 14px; padding: 8px 14px; min-height: 42px;
+      }
+      .btn-ghost:hover { border-color: var(--gold); color: var(--ink); opacity: 1; }
+      .list-tools { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+      /* Results */
+      .results-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+      .results-card h2 { margin: 0 0 2px; font-size: 19px; letter-spacing: -0.01em; }
+      .results-sub { color: var(--ink-soft); font-size: 14px; margin: 0 0 14px; }
+      .big-number { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+      .big-label { font-size: 13px; font-weight: 700; color: var(--ink-soft); margin-top: 2px; }
+      .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+      .stat { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
+      .stat .v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.15; }
+      .stat .k { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; margin-top: 2px; }
+      .recommend {
+        margin-top: 16px;
+        background: var(--gold-tint);
+        border: 1px solid var(--gold);
+        border-radius: 10px;
+        padding: 14px 16px;
+      }
+      .recommend .v { font-size: 24px; font-weight: 800; line-height: 1.2; }
+      .recommend .k { font-size: 13.5px; color: var(--ink-soft); margin-top: 2px; }
+      .details-toggle {
+        appearance: none; border: none; background: none; cursor: pointer;
+        font: inherit; font-size: 14.5px; font-weight: 700; color: var(--gold-deep);
+        padding: 12px 0 0; min-height: 32px;
+        display: inline-flex; align-items: center; gap: 5px;
+        text-decoration: underline; text-underline-offset: 3px;
+      }
+      .details-toggle svg { width: 14px; height: 14px; flex: none; transition: transform 0.15s ease; }
+      .details-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+      .result-details[hidden] { display: none; }
+      .verdicts { margin-top: 14px; display: grid; gap: 10px; }
+      .verdict {
+        border-left: 3px solid var(--gold);
+        padding: 2px 0 2px 12px;
+        font-size: 14.5px;
+        color: var(--ink);
+      }
+      .verdict button {
+        appearance: none; border: none; background: none; cursor: pointer;
+        font: inherit; font-size: 14px; font-weight: 700; color: var(--gold-deep);
+        padding: 4px 0 0; text-decoration: underline; text-underline-offset: 3px;
+      }
+      .runtime-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14.5px; }
+      .runtime-table caption { text-align: left; font-weight: 700; font-size: 14px; padding-bottom: 6px; }
+      .runtime-table th, .runtime-table td { text-align: left; padding: 7px 6px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+      .runtime-table th { font-size: 12.5px; color: var(--ink-soft); }
+      .runtime-table tr.pick td { font-weight: 700; }
+      .runtime-table tr.pick td:first-child { color: var(--gold-deep); }
+      .honest { margin-top: 16px; font-size: 13.5px; color: var(--ink-faint); }
+
+      footer.site {
+        margin-top: 44px;
+        background: var(--charcoal);
+        color: #d8d2c4;
+        border-radius: var(--radius);
+        padding: 20px 22px;
+        font-size: 13.5px;
+      }
+      footer.site .fname { color: #f6efdd; font-weight: 800; font-size: 15px; }
+      footer.site .fname span { color: var(--gold); }
+      footer.site p { margin: 6px 0 0; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site">
+        <p class="wordmark">Backup Power <span class="flux">Calculator</span></p>
+        <p class="brandline">Work out the power station size your home actually needs.</p>
+        <p class="tagline">A standalone sizing tool by Richard Paul. Open source under the MIT License.</p>
+        <div class="rule" aria-hidden="true"></div>
+      </header>
+
+      <h1 class="page">What size power station do you need?</h1>
+      <p class="lede">Start with a situation, a room, or add devices one by one. Adjust the numbers to match your home. Your answer updates as you go.</p>
+
+      <h2 class="section">Start with a situation</h2>
+      <p class="section-note">One tap loads a typical bundle and a backup length. Everything stays editable after.</p>
+      <div class="chips" id="scenario-chips" role="group" aria-label="Scenario presets"></div>
+
+      <h2 class="section">Or start by room</h2>
+      <div class="chips" id="room-chips" role="group" aria-label="Room presets"></div>
+
+      <div class="layout">
+        <div>
+          <h2 class="section">Your devices</h2>
+          <div class="card">
+            <div class="duration-row">
+              <label id="duration-label">How long should it last?</label>
+              <div class="seg" id="duration-seg" role="group" aria-labelledby="duration-label"></div>
+              <span class="duration-custom">
+                <input type="number" id="duration-custom" min="1" max="240" step="1" value="24" aria-label="Custom backup length in hours" />
+                hours
+              </span>
+            </div>
+
+            <div class="device-list" id="device-list"></div>
+            <div class="empty-state" id="empty-state">Nothing here yet. Pick a situation or a room above, or add your first device below.</div>
+
+            <div class="add-row">
+              <select id="add-select" aria-label="Add a device"></select>
+              <button class="btn" id="add-btn" type="button">Add device</button>
+            </div>
+            <div class="list-tools" style="margin-top:12px;">
+              <span style="font-size:13.5px; color: var(--ink-faint);">Watts, hours and run share are typical values. Change any of them.</span>
+              <button class="btn btn-ghost" id="clear-btn" type="button">Clear list</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="results-col">
+          <div class="results-card" id="results">
+            <h2>Your answer</h2>
+            <p class="results-sub" id="results-sub">Add a device to see your numbers.</p>
+            <div class="big-number" id="out-energy">0 Wh</div>
+            <div class="big-label" id="out-energy-label">of energy for the backup length you picked</div>
+
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="v" id="out-peak">0 W</div>
+                <div class="k">Peak power the station must handle, including the biggest start-up surge</div>
+              </div>
+              <div class="stat">
+                <div class="v" id="out-inverter">0 W</div>
+                <div class="k">Minimum inverter size to look for</div>
+              </div>
+            </div>
+
+            <div class="recommend">
+              <div class="v" id="out-class">Around 0 Wh</div>
+              <div class="k" id="out-class-note">Recommended station size, with a safety buffer built in.</div>
+            </div>
+
+            <button class="details-toggle" id="details-toggle" type="button" aria-expanded="false" aria-controls="result-details"><span id="details-toggle-label">See detailed results</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+
+            <div class="result-details" id="result-details" hidden>
+              <div class="verdicts" id="verdicts" aria-live="polite"></div>
+
+              <table class="runtime-table" id="runtime-table">
+                <caption>How long your bundle runs on each station size</caption>
+                <thead>
+                  <tr><th scope="col">Station size</th><th scope="col">Your bundle runs</th></tr>
+                </thead>
+                <tbody id="runtime-body"></tbody>
+              </table>
+
+              <p class="honest">Estimates use typical wattages. Check the label on your appliance for its exact draw. Stations deliver roughly 85 percent of their rated capacity to your devices, and that is already counted in these numbers.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="site">
+        <p class="fname">Backup Power <span>Calculator</span></p>
+        <p>A standalone sizing tool by Richard Paul. Released under the MIT License (see LICENSE).</p>
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        var btn = document.getElementById("details-toggle");
+        var panel = document.getElementById("result-details");
+        var label = document.getElementById("details-toggle-label");
+        if (!btn || !panel) return;
+        btn.addEventListener("click", function () {
+          var open = panel.hasAttribute("hidden");
+          if (open) { panel.removeAttribute("hidden"); } else { panel.setAttribute("hidden", ""); }
+          btn.setAttribute("aria-expanded", open ? "true" : "false");
+          if (label) label.textContent = open ? "Hide detailed results" : "See detailed results";
+        });
+      })();
+    </script>
+    <script>
+      "use strict";
+
+      /* Device catalogue. watts: typical running draw. start: start-up surge.
+         duty: share of the time the device is actually drawing power, in percent.
+         hours: hours of use in a day. */
+      var CATALOG = [
+        { group: "Kitchen", devices: [
+          { id: "fridge",    name: "Refrigerator",   watts: 150,  start: 800,  duty: 50,  hours: 24,   note: "Cycles on and off to hold temperature, so it draws power about half the time." },
+          { id: "freezer",   name: "Chest freezer",  watts: 100,  start: 600,  duty: 40,  hours: 24,   note: "Cycles on and off. A full freezer holds cold longer than an empty one." },
+          { id: "microwave", name: "Microwave",      watts: 1200, start: 1200, duty: 100, hours: 0.5 },
+          { id: "coffee",    name: "Coffee maker",   watts: 1000, start: 1000, duty: 100, hours: 0.5 },
+          { id: "kettle",    name: "Electric kettle", watts: 1500, start: 1500, duty: 100, hours: 0.25 }
+        ]},
+        { group: "Water and basement", devices: [
+          { id: "sump", name: "Sump pump", watts: 800, start: 1300, duty: 15, hours: 24, note: "Runs in short bursts when water rises. Heavy rain can push the run share well above 15 percent." },
+          { id: "well", name: "Well pump", watts: 1000, start: 2000, duty: 10, hours: 24, note: "Kicks on to refill the pressure tank, then rests. The start-up surge is the spike to plan for." }
+        ]},
+        { group: "Health", devices: [
+          { id: "cpap",   name: "CPAP",                watts: 60,  start: 60,  duty: 100, hours: 8 },
+          { id: "oxygen", name: "Oxygen concentrator", watts: 350, start: 350, duty: 100, hours: 12 }
+        ]},
+        { group: "Heating and cooling", devices: [
+          { id: "heater",  name: "Space heater",            watts: 1500, start: 1500, duty: 100, hours: 8 },
+          { id: "pac",     name: "Portable air conditioner", watts: 1200, start: 1800, duty: 60, hours: 8, note: "Cycles once the room reaches temperature, so it draws full power about 60 percent of the time." },
+          { id: "wac",     name: "Window air conditioner",   watts: 1000, start: 1500, duty: 60, hours: 8, note: "Cycles once the room reaches temperature, so it draws full power about 60 percent of the time." },
+          { id: "furnace", name: "Furnace fan",             watts: 500,  start: 1000, duty: 50, hours: 12, note: "The fan that pushes heated air through the ducts. The furnace itself still needs its own fuel." },
+          { id: "blanket", name: "Electric blanket",        watts: 100,  start: 100,  duty: 100, hours: 8 }
+        ]},
+        { group: "Home basics", devices: [
+          { id: "lights", name: "LED lights",     watts: 10, start: 10, duty: 100, hours: 6,  note: "10 watts per bulb. Raise the count for more rooms." },
+          { id: "wifi",   name: "WiFi and modem", watts: 15, start: 15, duty: 100, hours: 24 },
+          { id: "tv",     name: "TV",             watts: 100, start: 100, duty: 100, hours: 4 },
+          { id: "phones", name: "Phone chargers", watts: 10, start: 10, duty: 100, hours: 3,  note: "10 watts per phone. Raise the count for the whole family." }
+        ]},
+        { group: "Work", devices: [
+          { id: "laptop",  name: "Laptop",                       watts: 65,  start: 65,  duty: 100, hours: 8 },
+          { id: "desktop", name: "Desktop computer and monitor", watts: 250, start: 250, duty: 100, hours: 8 }
+        ]}
+      ];
+
+      var BY_ID = {};
+      CATALOG.forEach(function (g) { g.devices.forEach(function (d) { BY_ID[d.id] = d; }); });
+
+      /* Presets: device ids with optional count overrides, plus backup length in hours. */
+      var SCENARIOS = [
+        { name: "Overnight outage", hours: 12, items: [["fridge",1],["wifi",1],["lights",5],["phones",2]] },
+        { name: "Full day without power", hours: 24, items: [["fridge",1],["wifi",1],["lights",5],["tv",1],["laptop",1],["coffee",1],["phones",2]] },
+        { name: "Weekend outage", hours: 48, items: [["fridge",1],["freezer",1],["wifi",1],["lights",5],["tv",1],["laptop",1],["coffee",1],["kettle",1],["phones",2]] },
+        { name: "Keep the basement dry", hours: 24, items: [["sump",1],["wifi",1],["lights",2]] },
+        { name: "Sleep with CPAP", hours: 12, items: [["cpap",1],["wifi",1],["lights",1],["phones",1]] },
+        { name: "Cool one room (AC)", hours: 12, items: [["pac",1],["fridge",1],["wifi",1],["lights",3]] },
+        { name: "Heat one room", hours: 12, items: [["heater",1],["fridge",1],["wifi",1],["lights",3]] }
+      ];
+
+      var ROOMS = [
+        { name: "Kitchen", items: [["fridge",1],["freezer",1],["microwave",1],["coffee",1],["kettle",1]] },
+        { name: "Basement", items: [["sump",1],["freezer",1],["lights",2]] },
+        { name: "Bedroom", items: [["cpap",1],["blanket",1],["phones",2],["lights",2]] },
+        { name: "Home office", items: [["laptop",1],["wifi",1],["lights",2],["phones",1]] },
+        { name: "Living room", items: [["tv",1],["lights",4],["wifi",1],["phones",2]] }
+      ];
+
+      var CAPACITY_CLASSES = [300, 500, 1000, 1500, 2000, 3600, 5000, 7200, 10000];
+      var RUNTIME_CLASSES = [500, 1000, 2000, 3600];
+      var INVERTER_STEPS = [300, 600, 1000, 1200, 1800, 2000, 2400, 3000, 3600, 4500, 6000];
+      var USABLE = 0.85;   /* share of rated capacity a station actually delivers */
+      var BUFFER = 1.25;   /* safety buffer on top of the raw energy need */
+
+      var state = { rows: [], durationHours: 24 };
+      var uidCounter = 0;
+
+      var listEl = document.getElementById("device-list");
+      var emptyEl = document.getElementById("empty-state");
+      var durationCustom = document.getElementById("duration-custom");
+
+      function makeRow(id, qty) {
+        var d = BY_ID[id];
+        uidCounter += 1;
+        return {
+          uid: uidCounter, id: d.id, name: d.name, note: d.note || "",
+          watts: d.watts, start: d.start, duty: d.duty, hours: d.hours, qty: qty || 1,
+          expanded: false
+        };
+      }
+
+      function loadBundle(items) {
+        state.rows = items.map(function (pair) { return makeRow(pair[0], pair[1]); });
+        renderRows();
+        recalc();
+      }
+
+      /* ---------- Rendering rows ---------- */
+      function fieldHtml(row, key, label, step) {
+        return '<div class="field"><label for="f-' + row.uid + '-' + key + '">' + label + '</label>' +
+          '<input type="number" id="f-' + row.uid + '-' + key + '" data-uid="' + row.uid + '" data-key="' + key +
+          '" value="' + row[key] + '" min="0" step="' + step + '" inputmode="decimal" /></div>';
+      }
+
+      function renderRows() {
+        listEl.innerHTML = "";
+        emptyEl.style.display = state.rows.length ? "none" : "block";
+        state.rows.forEach(function (row) {
+          var div = document.createElement("div");
+          div.className = "device" + (row.expanded ? " open" : "");
+          var fields =
+            fieldHtml(row, "watts", "Watts", "1") +
+            fieldHtml(row, "start", "Start-up watts", "1") +
+            fieldHtml(row, "hours", "Hours a day", "0.25") +
+            fieldHtml(row, "duty", "Runs % of the time", "1") +
+            fieldHtml(row, "qty", "How many", "1");
+          div.innerHTML =
+            '<div class="device-head"><p class="device-name">' + row.name +
+            ' <span class="device-qty" data-qty="' + row.uid + '"></span></p>' +
+            '<span class="device-wh" data-wh="' + row.uid + '"></span>' +
+            '<button type="button" class="device-toggle" data-toggle="' + row.uid + '" aria-expanded="' + (row.expanded ? "true" : "false") + '" aria-label="' + (row.expanded ? "Close" : "Edit") + ' ' + row.name + '">' +
+            (row.expanded ? "Close" : "Details") +
+            ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>' +
+            '<button type="button" class="remove-btn" data-remove="' + row.uid + '" aria-label="Remove ' + row.name + '">Remove</button></div>' +
+            '<div class="device-detail"' + (row.expanded ? "" : " hidden") + '>' +
+            '<div class="device-fields">' + fields + '</div>' +
+            (row.note ? '<p class="device-note">' + row.note + '</p>' : "") +
+            '</div>';
+          listEl.appendChild(div);
+        });
+      }
+
+      listEl.addEventListener("input", function (e) {
+        var t = e.target;
+        if (!t.dataset || !t.dataset.uid) return;
+        var row = state.rows.filter(function (r) { return r.uid === Number(t.dataset.uid); })[0];
+        if (!row) return;
+        var v = parseFloat(t.value);
+        if (isNaN(v) || v < 0) v = 0;
+        if (t.dataset.key === "duty") v = Math.min(v, 100);
+        if (t.dataset.key === "qty") v = Math.max(0, Math.round(v));
+        row[t.dataset.key] = v;
+        recalc();
+      });
+
+      listEl.addEventListener("click", function (e) {
+        var toggleBtn = e.target.closest ? e.target.closest("[data-toggle]") : null;
+        if (toggleBtn) {
+          var tuid = Number(toggleBtn.dataset.toggle);
+          var trow = state.rows.filter(function (r) { return r.uid === tuid; })[0];
+          if (trow) { trow.expanded = !trow.expanded; renderRows(); recalc(); }
+          return;
+        }
+        var removeBtn = e.target.closest ? e.target.closest("[data-remove]") : null;
+        if (removeBtn) {
+          var uid = Number(removeBtn.dataset.remove);
+          state.rows = state.rows.filter(function (r) { return r.uid !== uid; });
+          renderRows();
+          recalc();
+        }
+      });
+
+      /* ---------- Maths ---------- */
+      function effectiveHours(row, duration) {
+        if (duration <= 24) return Math.min(row.hours, duration);
+        return row.hours * (duration / 24);
+      }
+
+      function compute() {
+        var D = state.durationHours;
+        var totalWh = 0, dailyWh = 0, running = 0, surgeExtra = 0, surgeDevice = null;
+        state.rows.forEach(function (row) {
+          var wh = row.watts * (row.duty / 100) * effectiveHours(row, D) * row.qty;
+          totalWh += wh;
+          dailyWh += row.watts * (row.duty / 100) * row.hours * row.qty;
+          running += row.watts * row.qty;
+          var extra = row.start - row.watts;
+          if (extra > surgeExtra) { surgeExtra = extra; surgeDevice = row; }
+          row._wh = wh;
+        });
+        var peak = running + Math.max(0, surgeExtra);
+        var needNameplate = totalWh > 0 ? (totalWh * BUFFER) / USABLE : 0;
+        var recClass = 0;
+        for (var i = 0; i < CAPACITY_CLASSES.length; i++) {
+          if (CAPACITY_CLASSES[i] >= needNameplate) { recClass = CAPACITY_CLASSES[i]; break; }
+        }
+        var overMax = totalWh > 0 && recClass === 0;
+        if (overMax) recClass = CAPACITY_CLASSES[CAPACITY_CLASSES.length - 1];
+        var inverter = 0;
+        for (var j = 0; j < INVERTER_STEPS.length; j++) {
+          if (INVERTER_STEPS[j] >= peak && peak > 0) { inverter = INVERTER_STEPS[j]; break; }
+        }
+        if (peak > 0 && inverter === 0) inverter = Math.ceil(peak / 500) * 500;
+        var avgDraw = dailyWh / 24;
+        return {
+          totalWh: totalWh, dailyWh: dailyWh, running: running, peak: peak,
+          surgeExtra: Math.max(0, surgeExtra), surgeDevice: surgeDevice,
+          recClass: recClass, overMax: overMax, inverter: inverter, avgDraw: avgDraw,
+          needNameplate: needNameplate
+        };
+      }
+
+      function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+      function fmtHours(h) {
+        if (h <= 0) return "0 hours";
+        if (h < 1) return "under 1 hour";
+        if (h < 24) return "about " + Math.round(h) + (Math.round(h) === 1 ? " hour" : " hours");
+        var d = h / 24;
+        var rd = Math.round(d * 10) / 10;
+        return "about " + rd + (rd === 1 ? " day" : " days");
+      }
+
+      function buildVerdicts(r) {
+        var out = [];
+        if (!state.rows.length) return out;
+        /* Biggest energy user */
+        var biggest = null;
+        state.rows.forEach(function (row) { if (!biggest || row._wh > biggest._wh) biggest = row; });
+        if (biggest && r.totalWh > 0) {
+          var share = Math.round((biggest._wh / r.totalWh) * 100);
+          if (state.rows.length > 1 && share >= 25) {
+            out.push({ text: "The " + biggest.name.toLowerCase() + " is the biggest draw in this list, using about " + share + " percent of the energy. Shave its hours and the whole answer gets smaller." });
+          }
+        }
+        /* Heater guidance */
+        var heater = state.rows.filter(function (x) { return x.id === "heater"; })[0];
+        if (heater && r.recClass > 0) {
+          var usable = r.recClass * USABLE;
+          var hrs = usable / (heater.watts * heater.qty);
+          var blanket = state.rows.filter(function (x) { return x.id === "blanket"; })[0];
+          var v = { text: "A space heater is the hungriest load in the house. On a " + fmt(r.recClass) + " Wh station it runs " + fmtHours(hrs) + " on its own. Most people heat one person, not the room: an electric blanket uses about a tenth of the power." };
+          if (!blanket) v.action = { label: "Add an electric blanket instead", id: "blanket" };
+          out.push(v);
+        }
+        /* AC guidance */
+        var ac = state.rows.filter(function (x) { return x.id === "pac" || x.id === "wac"; })[0];
+        if (ac) {
+          out.push({ text: "Cooling is one of the hungriest jobs in the house. An air conditioner cycles on and off once the room cools, which is already counted here. Cool one small room with the door closed and you will stretch the station a long way." });
+        }
+        /* Surge guidance */
+        if (r.surgeDevice && r.surgeExtra >= 300) {
+          out.push({ text: "Watch the start-up surge. The " + r.surgeDevice.name.toLowerCase() + " needs about " + fmt(r.surgeDevice.start) + " W for a split second when its motor starts. The station's peak rating has to clear that, even though the running draw is lower." });
+        }
+        /* CPAP guidance */
+        var cpap = state.rows.filter(function (x) { return x.id === "cpap"; })[0];
+        if (cpap && r.avgDraw > 0) {
+          var night = (1000 * USABLE) / (cpap.watts * cpap.qty);
+          out.push({ text: "A CPAP is a light load. Even a 1,000 Wh station runs one for roughly " + Math.floor(night) + " hours of sleep, with power to spare for lights and phones." });
+        }
+        return out;
+      }
+
+      function recalc() {
+        var r = compute();
+        var has = state.rows.length > 0 && r.totalWh > 0;
+
+        document.getElementById("out-energy").textContent = fmt(r.totalWh) + " Wh";
+        document.getElementById("results-sub").textContent = has
+          ? "For " + state.durationHours + " hours of backup, with the devices below."
+          : "Add a device to see your numbers.";
+        document.getElementById("out-peak").textContent = fmt(r.peak) + " W";
+        document.getElementById("out-inverter").textContent = fmt(r.inverter) + " W";
+        document.getElementById("out-class").textContent = has
+          ? (r.overMax ? "Over " + fmt(r.recClass) + " Wh" : "Around " + fmt(r.recClass) + " Wh")
+          : "Around 0 Wh";
+        document.getElementById("out-class-note").textContent = r.overMax
+          ? "That is a lot of backup. At this size, a larger home battery setup usually makes more sense than a single portable station."
+          : "Recommended station size, with a safety buffer built in.";
+
+        /* Per-row energy labels */
+        state.rows.forEach(function (row) {
+          var el = document.querySelector('[data-wh="' + row.uid + '"]');
+          if (el) el.textContent = row._wh ? fmt(row._wh) + " Wh" : "";
+          var q = document.querySelector('[data-qty="' + row.uid + '"]');
+          if (q) q.textContent = row.qty > 1 ? "×" + row.qty : "";
+        });
+
+        /* Verdicts */
+        var vWrap = document.getElementById("verdicts");
+        vWrap.innerHTML = "";
+        buildVerdicts(r).forEach(function (v) {
+          var div = document.createElement("div");
+          div.className = "verdict";
+          var p = document.createElement("span");
+          p.textContent = v.text;
+          div.appendChild(p);
+          if (v.action) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.textContent = v.action.label;
+            b.addEventListener("click", function () {
+              var newRow = makeRow(v.action.id, 1);
+              newRow.expanded = true;
+              state.rows.push(newRow);
+              renderRows();
+              recalc();
+            });
+            div.appendChild(document.createElement("br"));
+            div.appendChild(b);
+          }
+          vWrap.appendChild(div);
+        });
+
+        /* Runtime table */
+        var tbody = document.getElementById("runtime-body");
+        tbody.innerHTML = "";
+        RUNTIME_CLASSES.forEach(function (c) {
+          var tr = document.createElement("tr");
+          if (c === r.recClass) tr.className = "pick";
+          var run = r.avgDraw > 0 ? (c * USABLE) / r.avgDraw : 0;
+          tr.innerHTML = "<td>" + fmt(c) + " Wh" + (c === r.recClass ? " (your size)" : "") + "</td><td>" + (has ? fmtHours(run) : "-") + "</td>";
+          tbody.appendChild(tr);
+        });
+
+      }
+
+      /* ---------- Controls ---------- */
+      var scenarioWrap = document.getElementById("scenario-chips");
+      SCENARIOS.forEach(function (s) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "chip"; b.textContent = s.name;
+        b.addEventListener("click", function () {
+          setDuration(s.hours);
+          loadBundle(s.items);
+          document.getElementById("device-list").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+        scenarioWrap.appendChild(b);
+      });
+
+      var roomWrap = document.getElementById("room-chips");
+      ROOMS.forEach(function (rm) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "chip"; b.textContent = rm.name;
+        b.addEventListener("click", function () {
+          loadBundle(rm.items);
+          document.getElementById("device-list").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+        roomWrap.appendChild(b);
+      });
+
+      var DURATION_PRESETS = [8, 12, 24, 48, 72];
+      var seg = document.getElementById("duration-seg");
+      var segBtns = [];
+      DURATION_PRESETS.forEach(function (h) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = h + "h";
+        b.setAttribute("aria-pressed", h === 24 ? "true" : "false");
+        b.addEventListener("click", function () { setDuration(h); recalc(); });
+        seg.appendChild(b);
+        segBtns.push({ h: h, btn: b });
+      });
+
+      function setDuration(h) {
+        state.durationHours = Math.max(1, h || 24);
+        durationCustom.value = state.durationHours;
+        segBtns.forEach(function (s) {
+          s.btn.setAttribute("aria-pressed", s.h === state.durationHours ? "true" : "false");
+        });
+      }
+      durationCustom.addEventListener("input", function () {
+        var v = parseFloat(durationCustom.value);
+        if (!isNaN(v) && v > 0) { state.durationHours = Math.min(v, 240); recalc(); }
+        segBtns.forEach(function (s) {
+          s.btn.setAttribute("aria-pressed", s.h === state.durationHours ? "true" : "false");
+        });
+      });
+
+      /* Add device dropdown */
+      var select = document.getElementById("add-select");
+      CATALOG.forEach(function (g) {
+        var og = document.createElement("optgroup");
+        og.label = g.group;
+        g.devices.forEach(function (d) {
+          var o = document.createElement("option");
+          o.value = d.id;
+          o.textContent = d.name + " (" + d.watts + " W)";
+          og.appendChild(o);
+        });
+        select.appendChild(og);
+      });
+      document.getElementById("add-btn").addEventListener("click", function () {
+        var added = makeRow(select.value, 1);
+        added.expanded = true;
+        state.rows.push(added);
+        renderRows();
+        recalc();
+      });
+      document.getElementById("clear-btn").addEventListener("click", function () {
+        state.rows = [];
+        renderRows();
+        recalc();
+      });
+
+      /* First paint: load the most common starting point */
+      loadBundle(SCENARIOS[0].items);
+      setDuration(SCENARIOS[0].hours);
+      recalc();
+    </script>
+  </body>
+</html>
