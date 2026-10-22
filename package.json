@@ -1,0 +1,9 @@
+{
+  "name": "backup-power-sizing-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Size a portable power station for your home from your actual devices, runtimes, and surge watts.",
+  "scripts": {
+    "test": "node test/calculator.test.js"
+  }
+}
