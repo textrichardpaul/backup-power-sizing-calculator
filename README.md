@@ -71,6 +71,9 @@ A refrigerator and five LED bulbs, for a 12 hour overnight outage:
   start-up surge of 800 - 150 = 650 W, gives a peak of 850 W, so look for an
   inverter of at least 1,000 W.
 
+More worked examples, including a CPAP night and a well pump day, are in
+[docs/examples.md](docs/examples.md).
+
 ## Run it
 
 The whole tool is one file, index.html, with no build step, no dependencies,
@@ -80,14 +83,16 @@ and no network requests. Either:
 - Serve the folder with any static file server, for example
   `python3 -m http.server` and visit the local address it prints.
 
-## Tests
+## Running the tests
 
 The sizing maths is covered by a small Node test that loads the calculator
 script out of index.html and checks four hand-computed cases (an overnight
 fridge and lights load, a CPAP night, a high-surge well pump load, and a
-fridge-only cross-check):
+fridge-only cross-check). No dependencies; you only need Node:
 
-    node test/calculator.test.js
+    npm test
+
+which runs `node test/calculator.test.js` (you can also call that directly).
 
 It prints expected and actual values for each case and exits nonzero if any
 case fails.
