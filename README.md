@@ -99,4 +99,4 @@ case fails.
 
 ## Licence
 
-MIT. See the LICENSE file. Copyright (c) 2026 Richard Paul.
+MIT. See the [LICENSE](LICENSE) file. Copyright (c) 2026 Richard Paul.
