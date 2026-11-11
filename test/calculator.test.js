@@ -52,7 +52,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext(
-  src + "\n;globalThis.__api = { compute: compute, makeRow: makeRow, buildVerdicts: buildVerdicts, state: state, USABLE: USABLE };",
+  src + "\n;globalThis.__api = { compute: compute, makeRow: makeRow, buildVerdicts: buildVerdicts, correctFieldValue: correctFieldValue, state: state, USABLE: USABLE };",
   sandbox
 );
 const api = sandbox.__api;
@@ -143,6 +143,27 @@ check("Fridge only (24 h)", "runtime on 1,000 Wh class (h)",
   (1000 * api.USABLE) / fridge.avgDraw, 11.33, 0.01);
 check("Fridge only (24 h)", "runtime on 1,024 Wh station (h)",
   (1024 * api.USABLE) / fridge.avgDraw, 11.61, 0.01);
+
+/* ---------- Case 5: field corrections (v1.1 defect 2) ----------
+   Edited fields are corrected before use, and the field must show the
+   corrected value so the screen matches the answer:
+   run share above 100 is capped at 100, negative numbers become 0,
+   a non-numeric entry becomes 0, and a fractional quantity is rounded
+   to a whole number. Values that need no correction pass through
+   unchanged, including fractional hours. */
+console.log("Case: Field corrections");
+check("Field corrections", "duty 150 capped", api.correctFieldValue("duty", 150), 100);
+check("Field corrections", "duty 100 unchanged", api.correctFieldValue("duty", 100), 100);
+check("Field corrections", "duty 45 unchanged", api.correctFieldValue("duty", 45), 45);
+check("Field corrections", "duty -10 becomes 0", api.correctFieldValue("duty", -10), 0);
+check("Field corrections", "watts -20 becomes 0", api.correctFieldValue("watts", -20), 0);
+check("Field corrections", "watts non-numeric becomes 0", api.correctFieldValue("watts", NaN), 0);
+check("Field corrections", "qty 1.5 rounds to 2", api.correctFieldValue("qty", 1.5), 2);
+check("Field corrections", "qty 1.4 rounds to 1", api.correctFieldValue("qty", 1.4), 1);
+check("Field corrections", "qty -3 becomes 0", api.correctFieldValue("qty", -3), 0);
+check("Field corrections", "qty 3 unchanged", api.correctFieldValue("qty", 3), 3);
+check("Field corrections", "hours -1 becomes 0", api.correctFieldValue("hours", -1), 0);
+check("Field corrections", "hours 2.5 unchanged", api.correctFieldValue("hours", 2.5), 2.5);
 
 console.log(failures === 0 ? "\nAll checks passed." : "\n" + failures + " check(s) FAILED.");
 process.exit(failures === 0 ? 0 : 1);
