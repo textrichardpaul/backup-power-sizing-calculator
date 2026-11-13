@@ -789,19 +789,56 @@
         segBtns.push({ h: h, btn: b });
       });
 
-      function setDuration(h) {
-        state.durationHours = Math.max(1, h || 24);
-        durationCustom.value = state.durationHours;
+      var MAX_DURATION_HOURS = 240;
+      var DEFAULT_DURATION_HOURS = 24;
+
+      /* Correction applied to the custom backup length: an entry above
+         the 240 hour maximum is clamped to 240, and a cleared, zero,
+         negative or non-numeric entry falls back to the default 24
+         hours. This function is the single place that correction is
+         defined, so the field display and the calculation always use
+         the same length. */
+      function correctDurationValue(value) {
+        var v = typeof value === "number" ? value : parseFloat(value);
+        if (isNaN(v) || v <= 0) return DEFAULT_DURATION_HOURS;
+        return Math.min(v, MAX_DURATION_HOURS);
+      }
+
+      function syncDurationSeg() {
         segBtns.forEach(function (s) {
           s.btn.setAttribute("aria-pressed", s.h === state.durationHours ? "true" : "false");
         });
       }
+
+      function setDuration(h) {
+        state.durationHours = correctDurationValue(h);
+        durationCustom.value = state.durationHours;
+        syncDurationSeg();
+      }
       durationCustom.addEventListener("input", function () {
-        var v = parseFloat(durationCustom.value);
-        if (!isNaN(v) && v > 0) { state.durationHours = Math.min(v, 240); recalc(); }
-        segBtns.forEach(function (s) {
-          s.btn.setAttribute("aria-pressed", s.h === state.durationHours ? "true" : "false");
-        });
+        var parsed = parseFloat(durationCustom.value);
+        if (!isNaN(parsed) && parsed > 0) {
+          var v = correctDurationValue(parsed);
+          state.durationHours = v;
+          /* Show the clamped value when the entry was above the
+             maximum, so the screen matches the result. An empty or
+             zero entry is left alone while typing and is synced to
+             the fallback value on change below. */
+          if (v !== parsed) durationCustom.value = v;
+          recalc();
+        }
+        syncDurationSeg();
+      });
+
+      durationCustom.addEventListener("change", function () {
+        /* On commit, always sync the field to the length in use,
+           including a cleared or zero entry that fell back to the
+           default 24 hours, instead of silently keeping the
+           previous length. */
+        state.durationHours = correctDurationValue(durationCustom.value);
+        durationCustom.value = state.durationHours;
+        syncDurationSeg();
+        recalc();
       });
 
       /* Add device dropdown */
