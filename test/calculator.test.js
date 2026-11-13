@@ -52,7 +52,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext(
-  src + "\n;globalThis.__api = { compute: compute, makeRow: makeRow, buildVerdicts: buildVerdicts, correctFieldValue: correctFieldValue, state: state, USABLE: USABLE };",
+  src + "\n;globalThis.__api = { compute: compute, makeRow: makeRow, buildVerdicts: buildVerdicts, correctFieldValue: correctFieldValue, correctDurationValue: correctDurationValue, state: state, USABLE: USABLE };",
   sandbox
 );
 const api = sandbox.__api;
@@ -164,6 +164,23 @@ check("Field corrections", "qty -3 becomes 0", api.correctFieldValue("qty", -3),
 check("Field corrections", "qty 3 unchanged", api.correctFieldValue("qty", 3), 3);
 check("Field corrections", "hours -1 becomes 0", api.correctFieldValue("hours", -1), 0);
 check("Field corrections", "hours 2.5 unchanged", api.correctFieldValue("hours", 2.5), 2.5);
+
+/* ---------- Case 6: custom backup length (v1.1 defect 3) ----------
+   The custom backup length field must match the result: an entry
+   above the 240 hour maximum is clamped to 240, and a cleared, zero,
+   negative or non-numeric entry falls back to the default 24 hours
+   instead of silently keeping the previous length. Values inside
+   the range pass through unchanged. */
+console.log("Case: Custom backup length");
+check("Custom backup length", "300 clamped to 240", api.correctDurationValue(300), 240);
+check("Custom backup length", "241 clamped to 240", api.correctDurationValue(241), 240);
+check("Custom backup length", "240 unchanged", api.correctDurationValue(240), 240);
+check("Custom backup length", "48 unchanged", api.correctDurationValue(48), 48);
+check("Custom backup length", "12 unchanged", api.correctDurationValue(12), 12);
+check("Custom backup length", "0 falls back to 24", api.correctDurationValue(0), 24);
+check("Custom backup length", "negative falls back to 24", api.correctDurationValue(-5), 24);
+check("Custom backup length", "non-numeric falls back to 24", api.correctDurationValue(NaN), 24);
+check("Custom backup length", "cleared falls back to 24", api.correctDurationValue(""), 24);
 
 console.log(failures === 0 ? "\nAll checks passed." : "\n" + failures + " check(s) FAILED.");
 process.exit(failures === 0 ? 0 : 1);
