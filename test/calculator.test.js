@@ -182,5 +182,27 @@ check("Custom backup length", "negative falls back to 24", api.correctDurationVa
 check("Custom backup length", "non-numeric falls back to 24", api.correctDurationValue(NaN), 24);
 check("Custom backup length", "cleared falls back to 24", api.correctDurationValue(""), 24);
 
+/* ---------- Case 7: hours a day cap (v1.1 defect 4) ----------
+   "Hours a day" must be capped at 24 in both the field and the
+   calculation: an entry above 24 is corrected to 24, so the field
+   shows 24 and the energy total uses 24, not the typed value.
+   Values at or below 24 pass through unchanged, including
+   fractional hours. A row whose hours were set above 24 without
+   going through the field correction must still be calculated
+   at 24: a fridge at 100 hours a day counts the same as at 24. */
+console.log("Case: Hours a day cap");
+check("Hours a day cap", "hours 100 capped to 24", api.correctFieldValue("hours", 100), 24);
+check("Hours a day cap", "hours 25 capped to 24", api.correctFieldValue("hours", 25), 24);
+check("Hours a day cap", "hours 24 unchanged", api.correctFieldValue("hours", 24), 24);
+check("Hours a day cap", "hours 8 unchanged", api.correctFieldValue("hours", 8), 8);
+check("Hours a day cap", "hours 2.5 unchanged", api.correctFieldValue("hours", 2.5), 2.5);
+const cappedRow = api.makeRow("fridge", 1);
+cappedRow.hours = 100;
+api.state.rows = [cappedRow];
+api.state.durationHours = 24;
+const cappedResult = api.compute();
+check("Hours a day cap", "calculation totalWh at 100 hours uses 24", cappedResult.totalWh, 1800);
+check("Hours a day cap", "calculation dailyWh at 100 hours uses 24", cappedResult.dailyWh, 1800);
+
 console.log(failures === 0 ? "\nAll checks passed." : "\n" + failures + " check(s) FAILED.");
 process.exit(failures === 0 ? 0 : 1);
