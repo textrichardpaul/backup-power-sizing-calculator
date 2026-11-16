@@ -511,7 +511,7 @@
       function fieldHtml(row, key, label, step) {
         return '<div class="field"><label for="f-' + row.uid + '-' + key + '">' + label + '</label>' +
           '<input type="number" id="f-' + row.uid + '-' + key + '" data-uid="' + row.uid + '" data-key="' + key +
-          '" value="' + row[key] + '" min="0" step="' + step + '" inputmode="decimal" /></div>';
+          '" value="' + row[key] + '" min="0"' + (key === "hours" ? ' max="24"' : '') + ' step="' + step + '" inputmode="decimal" /></div>';
       }
 
       function renderRows() {
@@ -543,14 +543,16 @@
       }
 
       /* Corrections applied to edited fields: a negative or non-numeric
-         entry becomes 0, run share is capped at 100, and quantity is
-         rounded to a whole number. This function is the single place
-         those corrections are defined, so the field display and the
-         calculation always use the same corrected value. */
+         entry becomes 0, run share is capped at 100, hours a day is
+         capped at 24, and quantity is rounded to a whole number. This
+         function is the single place those corrections are defined, so
+         the field display and the calculation always use the same
+         corrected value. */
       function correctFieldValue(key, value) {
         var v = typeof value === "number" ? value : parseFloat(value);
         if (isNaN(v) || v < 0) v = 0;
         if (key === "duty") v = Math.min(v, 100);
+        if (key === "hours") v = Math.min(v, 24);
         if (key === "qty") v = Math.max(0, Math.round(v));
         return v;
       }
@@ -600,8 +602,9 @@
 
       /* ---------- Maths ---------- */
       function effectiveHours(row, duration) {
-        if (duration <= 24) return Math.min(row.hours, duration);
-        return row.hours * (duration / 24);
+        var hours = correctFieldValue("hours", row.hours);
+        if (duration <= 24) return Math.min(hours, duration);
+        return hours * (duration / 24);
       }
 
       function compute() {
@@ -610,7 +613,7 @@
         state.rows.forEach(function (row) {
           var wh = row.watts * (row.duty / 100) * effectiveHours(row, D) * row.qty;
           totalWh += wh;
-          dailyWh += row.watts * (row.duty / 100) * row.hours * row.qty;
+          dailyWh += row.watts * (row.duty / 100) * correctFieldValue("hours", row.hours) * row.qty;
           running += row.watts * row.qty;
           var extra = row.start - row.watts;
           if (extra > surgeExtra) { surgeExtra = extra; surgeDevice = row; }
