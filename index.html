@@ -651,6 +651,23 @@
         return "about " + rd + (rd === 1 ? " day" : " days");
       }
 
+      /* Hours a station of the recommended size runs a space heater on
+         its own, using the heater's own settings: its watts and count,
+         its run share, and its hours a day (capped at 24 by
+         correctFieldValue, the same correction the sizing maths uses).
+         The heater's daily energy is spread over 24 hours to give an
+         average draw, exactly as the runtime table does, so this figure
+         cannot contradict the sizing result or the runtime table.
+         Returns 0 when the heater draws nothing (run share or hours
+         set to 0), so the verdict can be skipped instead of quoting
+         an endless runtime. */
+      function heaterRuntimeHours(heater, recClass) {
+        var dailyWh = heater.watts * (heater.duty / 100) * correctFieldValue("hours", heater.hours) * heater.qty;
+        var avgDraw = dailyWh / 24;
+        if (avgDraw <= 0 || recClass <= 0) return 0;
+        return (recClass * USABLE) / avgDraw;
+      }
+
       function buildVerdicts(r) {
         var out = [];
         if (!state.rows.length) return out;
@@ -666,12 +683,13 @@
         /* Heater guidance */
         var heater = state.rows.filter(function (x) { return x.id === "heater"; })[0];
         if (heater && r.recClass > 0) {
-          var usable = r.recClass * USABLE;
-          var hrs = usable / (heater.watts * heater.qty);
-          var blanket = state.rows.filter(function (x) { return x.id === "blanket"; })[0];
-          var v = { text: "A space heater is the hungriest load in the house. On a " + fmt(r.recClass) + " Wh station it runs " + fmtHours(hrs) + " on its own. Most people heat one person, not the room: an electric blanket uses about a tenth of the power." };
-          if (!blanket) v.action = { label: "Add an electric blanket instead", id: "blanket" };
-          out.push(v);
+          var hrs = heaterRuntimeHours(heater, r.recClass);
+          if (hrs > 0) {
+            var blanket = state.rows.filter(function (x) { return x.id === "blanket"; })[0];
+            var v = { text: "A space heater is the hungriest load in the house. On a " + fmt(r.recClass) + " Wh station it runs " + fmtHours(hrs) + " on its own. Most people heat one person, not the room: an electric blanket uses about a tenth of the power." };
+            if (!blanket) v.action = { label: "Add an electric blanket instead", id: "blanket" };
+            out.push(v);
+          }
         }
         /* AC guidance */
         var ac = state.rows.filter(function (x) { return x.id === "pac" || x.id === "wac"; })[0];
