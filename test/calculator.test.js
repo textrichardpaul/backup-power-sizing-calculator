@@ -52,7 +52,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext(
-  src + "\n;globalThis.__api = { compute: compute, makeRow: makeRow, buildVerdicts: buildVerdicts, correctFieldValue: correctFieldValue, correctDurationValue: correctDurationValue, state: state, USABLE: USABLE };",
+  src + "\n;globalThis.__api = { compute: compute, makeRow: makeRow, buildVerdicts: buildVerdicts, correctFieldValue: correctFieldValue, correctDurationValue: correctDurationValue, heaterRuntimeHours: heaterRuntimeHours, state: state, USABLE: USABLE };",
   sandbox
 );
 const api = sandbox.__api;
@@ -204,5 +204,56 @@ const cappedResult = api.compute();
 check("Hours a day cap", "calculation totalWh at 100 hours uses 24", cappedResult.totalWh, 1800);
 check("Hours a day cap", "calculation dailyWh at 100 hours uses 24", cappedResult.dailyWh, 1800);
 
+/* ---------- Case 8: space heater verdict (v1.1 defect 5) ----------
+   The heater verdict must use the heater's own settings (run share
+   and hours a day, with hours capped at 24), not watts and quantity
+   only, so the verdict figure cannot contradict the sizing result.
+   The verdict runtime spreads the heater's daily energy over 24
+   hours, exactly as the runtime table does.
+   Default heater alone for 24 h: 1,500 W at 100% for 8 h a day is
+   12,000 Wh a day, an average draw of 500 W. The sizing result caps
+   at the 10,000 Wh class, so the verdict runtime is
+   (10,000 x 0.85) / 500 = 17 hours.
+   Heater at 50% run share and 4 hours a day: 1,500 x 0.5 x 4 =
+   3,000 Wh a day, an average draw of 125 W. Total need is 3,000 Wh,
+   nameplate 3,000 x 1.25 / 0.85 = 4,411.76, so the 5,000 Wh class,
+   and the verdict runtime is (5,000 x 0.85) / 125 = 34 hours,
+   shown as about 1.4 days. Watts and quantity alone would have
+   quoted (5,000 x 0.85) / 1,500 = about 3 hours.
+   A heater with run share or hours set to 0 draws nothing, so no
+   heater verdict is quoted at all. */
+console.log("Case: Space heater verdict");
+const heaterDefault = api.makeRow("heater", 1);
+api.state.rows = [heaterDefault];
+api.state.durationHours = 24;
+const heaterDefaultResult = api.compute();
+check("Space heater verdict", "default heater recClass", heaterDefaultResult.recClass, 10000);
+check("Space heater verdict", "default heater runtime (h)", api.heaterRuntimeHours(heaterDefault, heaterDefaultResult.recClass), 17);
+const heaterDefaultLine = api.buildVerdicts(heaterDefaultResult).map((v) => v.text).find((t) => t.includes("space heater"));
+check("Space heater verdict", "default verdict mentions about 17 hours",
+  typeof heaterDefaultLine === "string" && heaterDefaultLine.includes("runs about 17 hours on its own"), true);
+const heaterLow = api.makeRow("heater", 1);
+heaterLow.duty = 50;
+heaterLow.hours = 4;
+api.state.rows = [heaterLow];
+api.state.durationHours = 24;
+const heaterLowResult = api.compute();
+check("Space heater verdict", "low settings totalWh", heaterLowResult.totalWh, 3000);
+check("Space heater verdict", "low settings recClass", heaterLowResult.recClass, 5000);
+check("Space heater verdict", "low settings runtime (h)", api.heaterRuntimeHours(heaterLow, heaterLowResult.recClass), 34);
+const heaterLowLine = api.buildVerdicts(heaterLowResult).map((v) => v.text).find((t) => t.includes("space heater"));
+check("Space heater verdict", "low settings verdict mentions about 1.4 days",
+  typeof heaterLowLine === "string" && heaterLowLine.includes("runs about 1.4 days on its own"), true);
+const heaterCapped = api.makeRow("heater", 1);
+heaterCapped.hours = 100;
+check("Space heater verdict", "hours above 24 capped in verdict runtime (h)", api.heaterRuntimeHours(heaterCapped, 10000), 5.67, 0.01);
+const heaterOff = api.makeRow("heater", 1);
+heaterOff.duty = 0;
+api.state.rows = [heaterOff];
+api.state.durationHours = 24;
+const heaterOffResult = api.compute();
+check("Space heater verdict", "zero run share runtime is 0", api.heaterRuntimeHours(heaterOff, heaterOffResult.recClass), 0);
+check("Space heater verdict", "zero run share quotes no heater verdict",
+  api.buildVerdicts(heaterOffResult).some((v) => v.text.includes("space heater")), false);
 console.log(failures === 0 ? "\nAll checks passed." : "\n" + failures + " check(s) FAILED.");
 process.exit(failures === 0 ? 0 : 1);
