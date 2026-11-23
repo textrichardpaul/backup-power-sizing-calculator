@@ -514,7 +514,77 @@
           '" value="' + row[key] + '" min="0"' + (key === "hours" ? ' max="24"' : '') + ' step="' + step + '" inputmode="decimal" /></div>';
       }
 
-      function renderRows() {
+      /* Focus preservation for list rebuilds (v1.1 defect 6).
+         Rebuilding the device list replaces every row element, so a
+         control that was just used disappears and keyboard focus
+         would fall back to the page body. These helpers work out
+         where focus should go after a rebuild: the same toggle or
+         field for the same device when it still exists, the remove
+         button of the device that took a removed device's place
+         (or the previous device when the last one was removed), and
+         nowhere in the list when the list is empty. The selector
+         helpers are pure, so the test harness can cover them. */
+      function focusTargetAfterRemoval(rows, removedIndex) {
+        if (!rows || !rows.length) return null;
+        var idx = typeof removedIndex === "number" && !isNaN(removedIndex) ? removedIndex : 0;
+        if (idx < 0) idx = 0;
+        if (idx >= rows.length) idx = rows.length - 1;
+        return rows[idx].uid;
+      }
+
+      function focusSelectorAfterRebuild(info, rows) {
+        if (!info || !rows) return null;
+        var exists = rows.some(function (r) { return r.uid === info.uid; });
+        if (info.kind === "toggle") {
+          return exists ? '[data-toggle="' + info.uid + '"]' : null;
+        }
+        if (info.kind === "field") {
+          return exists ? '[data-uid="' + info.uid + '"][data-key="' + info.key + '"]' : null;
+        }
+        if (info.kind === "remove") {
+          if (exists) return '[data-remove="' + info.uid + '"]';
+          var targetUid = focusTargetAfterRemoval(rows, info.index);
+          return targetUid === null || targetUid === undefined
+            ? null
+            : '[data-remove="' + targetUid + '"]';
+        }
+        return null;
+      }
+
+      function captureListFocus() {
+        var active = document.activeElement;
+        if (!active || !active.dataset) return null;
+        if (listEl && listEl.contains && !listEl.contains(active)) return null;
+        if (active.dataset.toggle) {
+          return { kind: "toggle", uid: Number(active.dataset.toggle) };
+        }
+        if (active.dataset.remove) {
+          var uid = Number(active.dataset.remove);
+          var idx = -1;
+          state.rows.forEach(function (r, i) { if (r.uid === uid) idx = i; });
+          return { kind: "remove", uid: uid, index: idx };
+        }
+        if (active.dataset.uid && active.dataset.key) {
+          return { kind: "field", uid: Number(active.dataset.uid), key: active.dataset.key };
+        }
+        return null;
+      }
+
+      function restoreListFocus(info) {
+        if (!info) return;
+        var selector = focusSelectorAfterRebuild(info, state.rows);
+        if (selector && listEl.querySelector) {
+          var el = listEl.querySelector(selector);
+          if (el && el.focus) { el.focus(); return; }
+        }
+        if (info.kind === "remove" && !state.rows.length) {
+          var addBtn = document.getElementById("add-btn");
+          if (addBtn && addBtn.focus) addBtn.focus();
+        }
+      }
+
+      function renderRows(restoreInfo) {
+        var focusInfo = restoreInfo !== undefined ? restoreInfo : captureListFocus();
         listEl.innerHTML = "";
         emptyEl.style.display = state.rows.length ? "none" : "block";
         state.rows.forEach(function (row) {
@@ -540,6 +610,7 @@
             '</div>';
           listEl.appendChild(div);
         });
+        restoreListFocus(focusInfo);
       }
 
       /* Corrections applied to edited fields: a negative or non-numeric
@@ -588,14 +659,16 @@
         if (toggleBtn) {
           var tuid = Number(toggleBtn.dataset.toggle);
           var trow = state.rows.filter(function (r) { return r.uid === tuid; })[0];
-          if (trow) { trow.expanded = !trow.expanded; renderRows(); recalc(); }
+          if (trow) { trow.expanded = !trow.expanded; renderRows({ kind: "toggle", uid: tuid }); recalc(); }
           return;
         }
         var removeBtn = e.target.closest ? e.target.closest("[data-remove]") : null;
         if (removeBtn) {
           var uid = Number(removeBtn.dataset.remove);
+          var removeIndex = -1;
+          state.rows.forEach(function (r, i) { if (r.uid === uid) removeIndex = i; });
           state.rows = state.rows.filter(function (r) { return r.uid !== uid; });
-          renderRows();
+          renderRows({ kind: "remove", uid: uid, index: removeIndex });
           recalc();
         }
       });
