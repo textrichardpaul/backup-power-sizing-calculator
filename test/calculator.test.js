@@ -52,7 +52,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext(
-  src + "\n;globalThis.__api = { compute: compute, makeRow: makeRow, buildVerdicts: buildVerdicts, correctFieldValue: correctFieldValue, correctDurationValue: correctDurationValue, heaterRuntimeHours: heaterRuntimeHours, state: state, USABLE: USABLE };",
+  src + "\n;globalThis.__api = { compute: compute, makeRow: makeRow, buildVerdicts: buildVerdicts, correctFieldValue: correctFieldValue, correctDurationValue: correctDurationValue, heaterRuntimeHours: heaterRuntimeHours, focusTargetAfterRemoval: focusTargetAfterRemoval, focusSelectorAfterRebuild: focusSelectorAfterRebuild, state: state, USABLE: USABLE };",
   sandbox
 );
 const api = sandbox.__api;
@@ -255,5 +255,41 @@ const heaterOffResult = api.compute();
 check("Space heater verdict", "zero run share runtime is 0", api.heaterRuntimeHours(heaterOff, heaterOffResult.recClass), 0);
 check("Space heater verdict", "zero run share quotes no heater verdict",
   api.buildVerdicts(heaterOffResult).some((v) => v.text.includes("space heater")), false);
+
+/* ---------- Case 9: focus after list rebuild (v1.1 defect 6) ----------
+   Toggling a device's Details or removing a device rebuilds the
+   whole list, so the control that was used disappears. Focus must
+   be restored after the rebuild: to the same device's toggle after
+   a toggle, and after a removal to the remove button of the device
+   that took the removed device's place, the previous device when
+   the last one was removed, or nowhere in the list when it is
+   empty (the caller then moves focus to the Add device button).
+   The DOM focus calls themselves cannot run in this harness, so
+   the pure selector helpers that decide the target are covered
+   here. */
+console.log("Case: Focus after list rebuild");
+const focusRows = [{ uid: 10 }, { uid: 20 }, { uid: 30 }];
+check("Focus after list rebuild", "toggle restores to same toggle",
+  api.focusSelectorAfterRebuild({ kind: "toggle", uid: 20 }, focusRows), '[data-toggle="20"]');
+check("Focus after list rebuild", "toggle for missing device gives no selector",
+  api.focusSelectorAfterRebuild({ kind: "toggle", uid: 99 }, focusRows), null);
+check("Focus after list rebuild", "field restores to same field",
+  api.focusSelectorAfterRebuild({ kind: "field", uid: 10, key: "watts" }, focusRows), '[data-uid="10"][data-key="watts"]');
+check("Focus after list rebuild", "removal of first goes to next device remove",
+  api.focusSelectorAfterRebuild({ kind: "remove", uid: 10, index: 0 }, [{ uid: 20 }, { uid: 30 }]), '[data-remove="20"]');
+check("Focus after list rebuild", "removal of middle goes to next device remove",
+  api.focusSelectorAfterRebuild({ kind: "remove", uid: 20, index: 1 }, [{ uid: 10 }, { uid: 30 }]), '[data-remove="30"]');
+check("Focus after list rebuild", "removal of last goes to previous device remove",
+  api.focusSelectorAfterRebuild({ kind: "remove", uid: 30, index: 2 }, [{ uid: 10 }, { uid: 20 }]), '[data-remove="20"]');
+check("Focus after list rebuild", "removal leaving empty list gives no selector",
+  api.focusSelectorAfterRebuild({ kind: "remove", uid: 10, index: 0 }, []), null);
+check("Focus after list rebuild", "target after removal at index 0",
+  api.focusTargetAfterRemoval([{ uid: 20 }, { uid: 30 }], 0), 20);
+check("Focus after list rebuild", "target after removal past end clamps to last",
+  api.focusTargetAfterRemoval([{ uid: 10 }, { uid: 20 }], 2), 20);
+check("Focus after list rebuild", "target after removal with empty list is null",
+  api.focusTargetAfterRemoval([], 0), null);
+check("Focus after list rebuild", "no focus info gives no selector",
+  api.focusSelectorAfterRebuild(null, focusRows), null);
 console.log(failures === 0 ? "\nAll checks passed." : "\n" + failures + " check(s) FAILED.");
 process.exit(failures === 0 ? 0 : 1);
