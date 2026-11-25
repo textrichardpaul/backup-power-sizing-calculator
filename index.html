@@ -74,6 +74,15 @@
         font-weight: 800;
       }
       .lede { color: var(--ink-soft); max-width: 62ch; margin: 0; }
+      .noscript-note {
+        margin: 20px 0 0;
+        background: var(--gold-tint);
+        border: 1px solid var(--gold);
+        border-radius: var(--radius);
+        padding: 14px 16px;
+        font-size: 15px;
+      }
+      .noscript-note strong { display: block; margin-bottom: 2px; }
 
       h2.section {
         font-size: 20px;
@@ -318,6 +327,13 @@
 
       <h1 class="page">What size power station do you need?</h1>
       <p class="lede">Start with a situation, a room, or add devices one by one. Adjust the numbers to match your home. Your answer updates as you go.</p>
+
+      <noscript>
+        <div class="noscript-note">
+          <strong>This calculator needs JavaScript to run.</strong>
+          The situation and room presets, the device list and your answer are all built by a script on this page. If scripts are off or blocked in your browser, those sections stay empty and the answer stays at 0 Wh. Turn JavaScript on for this page and reload it to use the calculator.
+        </div>
+      </noscript>
 
       <h2 class="section">Start with a situation</h2>
       <p class="section-note">One tap loads a typical bundle and a backup length. Everything stays editable after.</p>
